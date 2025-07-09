@@ -21,6 +21,9 @@ DD_BOT_SECRET = os.getenv("DD_BOT_SECRET")
 FEISHU_BOT_URL = os.getenv("FEISHU_BOT_URL")
 FEISHU_BOT_SECRET = os.getenv("FEISHU_BOT_SECRET")
 
+# 学期配置
+SEMESTER = os.getenv("SEMESTER", "2024-2025-2")  # 默认值为当前学期
+
 # 设置日志配置
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -126,8 +129,12 @@ def get_user_credentials():
     """
     user_account = os.getenv("USER_ACCOUNT")
     user_password = os.getenv("USER_PASSWORD")
-    logging.info(f"用户名: {user_account}")
-    logging.info(f"密码: {user_password}")
+    if user_account and user_password:
+        logging.info(f"用户名: {user_account[:2]}{'*' * (len(user_account)-2)}")
+        logging.info(f"密码: {'*' * len(user_password)}")
+    else:
+        logging.error("请在.env文件中设置USER_ACCOUNT和USER_PASSWORD环境变量")
+        return None, None
     return user_account, user_password
 
 
@@ -279,7 +286,7 @@ def parse_credits_and_gpa(session, cookies):
         html_content: HTML页面内容
     返回: [(学分, 绩点), ...] 的列表
     """
-    url = "http://zhjw.qfnu.edu.cn/jsxsd/kscj/cjcx_list?kksj=2024-2025-1&kcxz=&kcmc=&xsfs=all"
+    url = f"http://zhjw.qfnu.edu.cn/jsxsd/kscj/cjcx_list?kksj={SEMESTER}&kcxz=&kcmc=&xsfs=all"
     response = session.get(url, cookies=cookies)
     soup = BeautifulSoup(response.text, "lxml")
     results = []
@@ -331,11 +338,11 @@ def validate_credentials(user_account, user_password):
     logging.info("获取环境变量")
     if not user_account or not user_password:
         logging.error(
-            "请在.env文件中设置USER_ACCOUNT、USER_PASSWORD、DD_BOT_TOKEN、DD_BOT_SECRET、FEISHU_BOT_URL、FEISHU_BOT_SECRET环境变量"
+            "请在.env文件中设置USER_ACCOUNT、USER_PASSWORD、DD_BOT_TOKEN、DD_BOT_SECRET、FEISHU_BOT_URL、FEISHU_BOT_SECRET、SEMESTER环境变量"
         )
         with open(".env", "w", encoding="utf-8") as f:
             f.write(
-                "USER_ACCOUNT=\nUSER_PASSWORD=\nDD_BOT_TOKEN=\nDD_BOT_SECRET=\nFEISHU_BOT_URL=\nFEISHU_BOT_SECRET="
+                "USER_ACCOUNT=\nUSER_PASSWORD=\nDD_BOT_TOKEN=\nDD_BOT_SECRET=\nFEISHU_BOT_URL=\nFEISHU_BOT_SECRET=\nSEMESTER=2024-2025-2"
             )
         return False
     logging.info("获取环境变量成功")
@@ -468,9 +475,9 @@ def main():
         # 计算本学期绩点
         credits_and_points = parse_credits_and_gpa(session, cookies)
         average_gpa = calculate_average_gpa(credits_and_points)
-        logging.info(f"平均绩点: {average_gpa}")
+        logging.info(f"{SEMESTER}平均绩点: {average_gpa}")
         with open("output.txt", "a", encoding="utf-8") as f:
-            f.write(f"2024-2025-1平均绩点: {average_gpa}")
+            f.write(f"{SEMESTER}平均绩点: {average_gpa}\n")
 
     except Exception as e:
         handle_exception(e, user_account)
